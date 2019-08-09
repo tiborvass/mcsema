@@ -136,6 +136,8 @@ linux_initialize() {
                             libtinfo-dev:i386 
 
   pip install ccsyspath --user
+  pip install clang --user
+
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
