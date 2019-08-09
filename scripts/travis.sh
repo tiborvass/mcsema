@@ -135,7 +135,7 @@ linux_initialize() {
                             liblzma-dev:i386 \
                             libtinfo-dev:i386 
 
-  pip install ccsyspath
+  pip install ccsyspath --user
   if [ $? -ne 0 ] ; then
     printf " x Could not install the required dependencies\n"
     return 1
