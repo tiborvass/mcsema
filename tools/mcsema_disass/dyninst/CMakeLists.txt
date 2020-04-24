@@ -20,6 +20,8 @@ else ()
   set (CMAKE_CXX_FLAGS "-std=c++14")
 endif ()
 
+list(REMOVE_ITEM PROJECT_LIBRARIES remill)
+
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 find_package(Dyninst REQUIRED)
@@ -58,3 +60,5 @@ install(
   TARGETS ${MCSEMA_DYNINST_DISASS}
   RUNTIME DESTINATION bin
   )
+
+list(APPEND PROJECT_LIBRARIES remill)
