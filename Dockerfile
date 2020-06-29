@@ -4,6 +4,8 @@ ARG UBUNTU_VERSION=18.04
 ARG DISTRO_BASE=ubuntu${UBUNTU_VERSION}
 ARG BUILD_BASE=ubuntu:${UBUNTU_VERSION}
 ARG LIBRARIES=/opt/trailofbits/libraries
+ARG DYNINST=1
+ARG DYNINST_VERSION=v9.3.2
 
 
 # Run-time dependencies go here
@@ -21,7 +23,7 @@ RUN apt-get update && \
 
 
 # Build-time dependencies go here
-FROM trailofbits/cxx-common:llvm${LLVM_VERSION}-${DISTRO_BASE}-${ARCH} as deps
+FROM trailofbits/cxx-common:llvm${LLVM_VERSION}-${DISTRO_BASE}-${ARCH} as deps-base
 ARG LIBRARIES
 
 RUN apt-get update && \
@@ -31,6 +33,17 @@ RUN apt-get update && \
 
 # needed for 20.04 support until we migrate to py3
 RUN curl https://bootstrap.pypa.io/get-pip.py --output get-pip.py && python2.7 get-pip.py
+
+FROM deps-base AS deps-dyninst-0
+FROM deps-base AS deps-dyninst-1
+ARG DYNINST_VERSION
+WORKDIR /
+RUN git clone -b "${DYNINST_VERSION}" --depth 1 https://github.com/dyninst/dyninst && rm -rf dyninst/.git
+RUN apt-get update && apt-get install -y latex-make libboost-all-dev binutils cmake
+WORKDIR /dyninst/build
+RUN cmake .. && make -j$(nproc) install
+
+FROM deps-dyninst-$DYNINST AS deps
 
 WORKDIR /
 COPY .remill_commit_id ./
@@ -53,6 +66,7 @@ WORKDIR tools/mcsema
 
 # Source code build
 FROM deps as build
+ARG DYNINST
 # Using this file:
 # 1. wget https://raw.githubusercontent.com/trailofbits/mcsema/master/tools/Dockerfile
 # 2. docker build -t=mcsema .
@@ -64,7 +78,7 @@ FROM deps as build
 COPY . ./
 
 RUN mkdir -p ./build && cd ./build && \
-    cmake -G Ninja -DCMAKE_PREFIX_PATH=/opt/trailofbits/remill -DMCSEMA_DISABLED_ABI_LIBRARIES:STRING="" -DCMAKE_VERBOSE_MAKEFILE=True -DCMAKE_INSTALL_PREFIX=/opt/trailofbits/mcsema .. && \
+    cmake -G Ninja -DBUILD_MCSEMA_DYNINST_DISASS=$DYNINST -DCMAKE_PREFIX_PATH=/opt/trailofbits/remill -DMCSEMA_DISABLED_ABI_LIBRARIES:STRING="" -DCMAKE_VERBOSE_MAKEFILE=True -DCMAKE_INSTALL_PREFIX=/opt/trailofbits/mcsema .. && \
     cmake --build . --target install
 
 WORKDIR tests/test_suite_generator
